@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   title: { default: "B&B Cosenza Centro | Bei Sogni Luxury – Parcheggio e WiFi", template: "%s | Bei Sogni Luxury" },
   description: "Soggiorno di lusso nel cuore di Cosenza, a due passi da Corso Mazzini. Camere di design, WiFi gratuito, parcheggio in convenzione. Prenota direttamente.",
   keywords: ["B&B Cosenza", "Bed and Breakfast Cosenza centro", "B&B Corso Mazzini", "alloggio Cosenza", "parcheggio Cosenza centro"],
-  manifest: "/manifest.webmanifest",
   openGraph: { type: "website", locale: "it_IT", title: "Bei Sogni Luxury – B&B Cosenza Centro", description: "Camere di design e comfort esclusivi a due passi da Corso Mazzini." },
 };
 export const viewport: Viewport = { themeColor: "#14110f", width: "device-width", initialScale: 1 };
@@ -27,8 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body>{children}</body>

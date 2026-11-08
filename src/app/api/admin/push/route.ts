@@ -14,3 +14,11 @@ export async function POST(req: Request) {
   await env().DB.prepare("INSERT OR REPLACE INTO push_subscriptions (endpoint,subscription) VALUES (?,?)").bind(sub.endpoint, JSON.stringify(sub)).run();
   return Response.json({ ok: true });
 }
+
+/** Notifica di prova a tutti i dispositivi registrati. */
+export async function PUT(req: Request) {
+  if (!(await isAdmin(req))) return unauthorized();
+  const { pushToAdmins } = await import("@/lib/notify");
+  await pushToAdmins("Bei Sogni Luxury", "Notifiche attive: riceverai qui le nuove richieste.");
+  return Response.json({ ok: true });
+}

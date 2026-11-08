@@ -19,6 +19,8 @@ export async function POST(req: Request) {
     return Response.json({ error: "Controlla i dati inseriti" }, { status: 400 });
   const e = env();
   await ensureSchema();
+  const recent = await e.DB.prepare("SELECT COUNT(*) n FROM bookings WHERE (guest_email=?1 OR guest_phone=?2) AND created_at > datetime('now','-1 hour')").bind(email.trim(), phone.trim()).first<{ n: number }>();
+  if ((recent?.n ?? 0) >= 4) return Response.json({ error: "Troppe richieste ravvicinate: scrivici su WhatsApp" }, { status: 429 });
   const room = (await activeRooms(e.DB)).find((r) => r.id === roomId);
   if (!room || guests > room.capacity) return Response.json({ error: "Camera non disponibile" }, { status: 400 });
   const q = await quote(e.DB, room, checkIn, checkOut);
