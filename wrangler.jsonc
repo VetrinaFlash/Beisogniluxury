@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bei-sogni-luxury",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "bei-sogni-db" }
+  ],
+  "r2_buckets": [
+    { "binding": "PHOTOS", "bucket_name": "bei-sogni-photos" }
+  ],
+  "vars": {
+    "SITE_NAME": "Bei Sogni Luxury",
+    "SITE_URL": "https://bei-sogni-luxury.workers.dev",
+    "OWNER_EMAIL": "deisogniluxury@libero.it",
+    "EMAIL_FROM": "Bei Sogni Luxury <prenotazioni@example.com>"
+  }
+}
