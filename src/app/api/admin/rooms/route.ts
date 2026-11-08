@@ -30,3 +30,20 @@ export async function POST(req: Request) {
   await db.prepare("INSERT INTO rooms (id,name,description,capacity,base_price_cents,sort) VALUES (?,?,?,?,?,?)").bind(id, name.trim().slice(0, 80), "Descrizione della camera.", 2, 8000, (max?.m ?? 0) + 1).run();
   return Response.json({ ok: true, id });
 }
+
+export async function DELETE(req: Request) {
+  if (!(await isAdmin(req))) return unauthorized();
+  const { id } = (await req.json()) as { id: string };
+  const db = env().DB;
+  const used = await db.prepare("SELECT COUNT(*) n FROM bookings WHERE room_id=?").bind(id).first<{ n: number }>();
+  if (used && used.n > 0) {
+    await db.prepare("UPDATE rooms SET active=0 WHERE id=?").bind(id).run();
+    return Response.json({ ok: true, hidden: true });
+  }
+  await db.batch([
+    db.prepare("DELETE FROM season_prices WHERE room_id=?").bind(id),
+    db.prepare("DELETE FROM blocks WHERE room_id=?").bind(id),
+    db.prepare("DELETE FROM rooms WHERE id=?").bind(id),
+  ]);
+  return Response.json({ ok: true, deleted: true });
+}

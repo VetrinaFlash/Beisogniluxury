@@ -12,6 +12,8 @@ const eur = (c: number) => new Intl.NumberFormat("it-IT", { style: "currency", c
 const d = (s: string) => new Date(s + "T12:00:00Z").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
 const nights = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+const plus1 = (s: string) => (s ? iso(Date.parse(s + "T00:00:00Z") + 86400000) : s);
+const minus1 = (s: string) => iso(Date.parse(s + "T00:00:00Z") - 86400000);
 const LBL: Record<string, string> = { pending: "Da confermare", confirmed: "Confermata", rejected: "Rifiutata", cancelled: "Annullata" };
 const TABS: [Tab, string, string][] = [["req", "Richieste", "inbox"], ["cal", "Calendario", "cal"], ["rooms", "Camere", "bed"], ["site", "Sito", "sliders"], ["push", "Notifiche", "bell"]];
 
@@ -150,16 +152,24 @@ function Calendar({ bk, rooms, blocks, reload, say }: { bk: B[]; rooms: Rm[]; bl
   const [start, setStart] = useState(0);
   const today = iso(Date.now());
   const days = Array.from({ length: 35 }, (_, i) => iso(Date.now() + (start + i) * 86400000));
+  const next = (day: string) => iso(Date.parse(day + "T00:00:00Z") + 86400000);
   const at = (rid: string, day: string) => {
-    const x = bk.find((b) => b.room_id === rid && ["pending", "confirmed"].includes(b.status) && day >= b.check_in && day < b.check_out);
-    if (x) return { c: x.status === "pending" ? "p" : "c", s: day === x.check_in, e: iso(Date.parse(day) + 86400000) === x.check_out, t: `${x.guest_name} · ${LBL[x.status]}` };
-    const y = blocks.find((b) => b.room_id === rid && day >= b.from_date && day < b.to_date);
-    if (y) return { c: "b", s: day === y.from_date, e: iso(Date.parse(day) + 86400000) === y.to_date, t: y.reason || "Bloccata" };
+    const x = (bk ?? []).find((b) => b && b.room_id === rid && (b.status === "pending" || b.status === "confirmed") && day >= b.check_in && day < b.check_out);
+    if (x) return { c: x.status === "pending" ? "p" : "c", s: day === x.check_in, e: next(day) === x.check_out, t: `${x.guest_name} · ${d(x.check_in)} → ${d(x.check_out)} · ${LBL[x.status] ?? x.status}` };
+    const y = (blocks ?? []).find((b) => b && b.room_id === rid && day >= b.from_date && day < b.to_date);
+    if (y) return { c: "b", s: day === y.from_date, e: next(day) === y.to_date, t: `Bloccata${y.reason ? " · " + y.reason : ""} · ${d(y.from_date)} → ${d(y.to_date)}` };
     return null;
+  };
+  const [pre, setPre] = useState<{ roomId: string; from: string; to: string } | null>(null);
+  const tap = (rid: string, day: string) => {
+    const c = at(rid, day);
+    if (c) { say(c.t); return; }
+    setPre({ roomId: rid, from: day, to: next(day) });
+    setTimeout(() => document.getElementById("blockform")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
   async function add(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget; const f = Object.fromEntries(new FormData(form));
-    try { await api("/api/admin/blocks", "POST", f); form.reset(); say("Date bloccate"); reload(); } catch (er) { say((er as Error).message, true); }
+    try { await api("/api/admin/blocks", "POST", f); form.reset(); setPre(null); say("Date bloccate"); reload(); } catch (er) { say((er as Error).message, true); }
   }
   async function del(id: number) { try { await api("/api/admin/blocks", "DELETE", { id }); say("Blocco rimosso"); reload(); } catch (er) { say((er as Error).message, true); } }
   return (
@@ -169,17 +179,18 @@ function Calendar({ bk, rooms, blocks, reload, say }: { bk: B[]; rooms: Rm[]; bl
       </div>
       <div className="cal"><table>
         <thead><tr><th className="name">{new Date(days[0] + "T12:00:00Z").toLocaleDateString("it-IT", { month: "long", year: "numeric" })}</th>{days.map((x) => { const wd = new Date(x + "T12:00:00Z").getUTCDay(); return <th key={x} className={`${x === today ? "today" : ""} ${wd === 0 || wd === 6 ? "we" : ""}`}>{"DLMMGVS"[wd]}<br />{+x.slice(8)}</th>; })}</tr></thead>
-        <tbody>{rooms.map((r) => <tr key={r.id}><td className="name">{r.name}</td>{days.map((x) => { const c = at(r.id, x); return <td key={x} className={c ? `${c.c} ${c.s ? "s" : ""} ${c.e ? "e" : ""}` : ""} title={c?.t}>{c && <span />}</td>; })}</tr>)}</tbody>
+        <tbody>{rooms.map((r) => <tr key={r.id}><td className="name">{r.name}</td>{days.map((x) => { const c = at(r.id, x); return <td key={x} className={c ? `${c.c} ${c.s ? "s" : ""} ${c.e ? "e" : ""}` : ""} title={c?.t} onClick={() => tap(r.id, x)} style={{ cursor: "pointer" }}>{c && <span />}</td>; })}</tr>)}</tbody>
       </table></div>
-      <div className="legend"><span><i style={{ background: "#efc768" }} />Da confermare</span><span><i style={{ background: "#6aa37a" }} />Confermata</span><span><i style={{ background: "#c9bcaa" }} />Bloccata</span></div>
+      {rooms.length === 0 && <div className="empty"><b>Nessuna camera</b>Aggiungine una dalla sezione Camere.</div>}
+      <div className="legend"><span>Tocca un giorno libero per bloccarlo, uno occupato per i dettagli.</span><span><i style={{ background: "#efc768" }} />Da confermare</span><span><i style={{ background: "#6aa37a" }} />Confermata</span><span><i style={{ background: "#c9bcaa" }} />Bloccata</span></div>
       <div className="grid2">
-        <form className="card" onSubmit={add}>
+        <form className="card" id="blockform" key={pre ? `${pre.roomId}${pre.from}` : "x"} onSubmit={add}>
           <h3>Blocca date</h3>
           <p style={{ fontSize: ".85rem", color: "var(--muted)", marginBottom: ".8rem" }}>Per manutenzione o prenotazioni prese da Booking, telefono, ecc.</p>
           <div className="form" style={{ marginTop: 0 }}>
-            <div className="field full"><label>Camera</label><select name="roomId">{rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
-            <div className="field"><label>Dal</label><input type="date" name="from" required /></div>
-            <div className="field"><label>Al (giorno di partenza)</label><input type="date" name="to" required /></div>
+            <div className="field full"><label>Camera</label><select name="roomId" defaultValue={pre?.roomId}>{rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+            <div className="field"><label>Dal</label><input type="date" name="from" defaultValue={pre?.from} required /></div>
+            <div className="field"><label>Al (giorno di partenza)</label><input type="date" name="to" defaultValue={pre?.to} required /></div>
             <div className="field full"><label>Nota</label><input name="reason" placeholder="Es. Booking – Rossi" /></div>
             <div className="full"><button className="btn sm">Blocca</button></div>
           </div>
@@ -198,26 +209,28 @@ function Rooms({ rooms, reload, say }: { rooms: Rm[]; reload: () => void; say: (
   const [seasons, setSeasons] = useState<Se[]>([]);
   const loadS = useCallback(async () => { try { setSeasons((await api("/api/admin/seasons")).seasons); } catch { /* */ } }, []);
   useEffect(() => { loadS(); }, [loadS]);
-  async function addRoom() {
-    const name = prompt("Nome della nuova camera"); if (!name) return;
-    try { await api("/api/admin/rooms", "POST", { name }); say("Camera creata"); reload(); } catch (e) { say((e as Error).message, true); }
+  const [adding, setAdding] = useState(false);
+  async function addRoom(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const name = String(new FormData(e.currentTarget).get("name") ?? "").trim(); if (!name) return;
+    try { await api("/api/admin/rooms", "POST", { name }); say("Camera creata: aprila per completare prezzo e foto"); setAdding(false); reload(); } catch (er) { say((er as Error).message, true); }
   }
   async function addSeason(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget; const f = Object.fromEntries(new FormData(form));
-    try { await api("/api/admin/seasons", "POST", { roomId: f.roomId, from: f.from, to: f.to, price: Number(f.price), minNights: Number(f.min) || undefined }); form.reset(); say("Prezzo stagionale aggiunto"); loadS(); } catch (er) { say((er as Error).message, true); }
+    try { await api("/api/admin/seasons", "POST", { roomId: f.roomId, from: f.from, to: plus1(String(f.to)), price: Number(f.price), minNights: Number(f.min) || undefined }); form.reset(); say("Prezzo stagionale aggiunto"); loadS(); } catch (er) { say((er as Error).message, true); }
   }
   return (
     <>
-      <div className="atitle"><h1>Camere e prezzi</h1><button className="btn sm" onClick={addRoom}>+ Nuova camera</button></div>
-      {rooms.map((r) => <RoomEditor key={r.id} r={r} reload={reload} say={say} />)}
+      <div className="atitle"><h1>Camere e prezzi</h1><button className="btn sm" onClick={() => setAdding(!adding)}>{adding ? "Annulla" : "+ Nuova camera"}</button></div>
+      {adding && <form className="card" style={{ marginBottom: ".8rem", display: "flex", gap: ".6rem", alignItems: "end", flexWrap: "wrap" }} onSubmit={addRoom}><div className="field" style={{ flex: 1, minWidth: 200 }}><label>Nome della nuova camera</label><input name="name" required autoFocus maxLength={80} /></div><button className="btn sm">Crea</button></form>}
+      {rooms.map((r) => <RoomEditor key={r.id} r={r} reload={reload} say={say} seasons={seasons.filter((x) => x.room_id === r.id)} reloadSeasons={loadS} />)}
       <div className="grid2" style={{ marginTop: "1.6rem" }}>
         <form className="card" onSubmit={addSeason}>
-          <h3>Prezzi stagionali</h3>
-          <p style={{ fontSize: ".85rem", color: "var(--muted)", marginBottom: ".8rem" }}>Sostituiscono il prezzo base nel periodo indicato (es. agosto, ponti, eventi).</p>
+          <h3>Prezzi per periodo</h3>
+          <p style={{ fontSize: ".85rem", color: "var(--muted)", marginBottom: ".8rem" }}>Per più camere insieme. Puoi aggiungerli anche dentro ogni singola camera. Sostituiscono il prezzo base nel periodo indicato.</p>
           <div className="form" style={{ marginTop: 0 }}>
             <div className="field full"><label>Camera</label><select name="roomId"><option value="all">Tutte le camere</option>{rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
             <div className="field"><label>Dal</label><input type="date" name="from" required /></div>
-            <div className="field"><label>Al (escluso)</label><input type="date" name="to" required /></div>
+            <div className="field"><label>Fino alla notte del</label><input type="date" name="to" required /></div>
             <div className="field"><label>Prezzo / notte (€)</label><input type="number" name="price" min="1" step="0.01" required /></div>
             <div className="field"><label>Min. notti</label><input type="number" name="min" min="1" placeholder="—" /></div>
             <div className="full"><button className="btn sm">Aggiungi</button></div>
@@ -226,14 +239,14 @@ function Rooms({ rooms, reload, say }: { rooms: Rm[]; reload: () => void; say: (
         <div className="card">
           <h3>Periodi attivi</h3>
           {seasons.length === 0 ? <p style={{ color: "var(--muted)", fontSize: ".9rem" }}>Nessun prezzo stagionale.</p> :
-            seasons.map((s) => <div className="rowx" key={s.id}><span><b>{rooms.find((r) => r.id === s.room_id)?.name}</b><br />{d(s.from_date)} → {d(s.to_date)} · {eur(s.price_cents)}{s.min_nights ? ` · min ${s.min_nights} notti` : ""}</span><button className="btn sm ghost" onClick={async () => { await api("/api/admin/seasons", "DELETE", { id: s.id }); loadS(); }}>Rimuovi</button></div>)}
+            seasons.map((s) => <div className="rowx" key={s.id}><span><b>{rooms.find((r) => r.id === s.room_id)?.name}</b><br />{d(s.from_date)} → notte del {d(minus1(s.to_date))} · {eur(s.price_cents)}{s.min_nights ? ` · min ${s.min_nights} notti` : ""}</span><button className="btn sm ghost" onClick={async () => { await api("/api/admin/seasons", "DELETE", { id: s.id }); loadS(); }}>Rimuovi</button></div>)}
         </div>
       </div>
     </>
   );
 }
 
-function RoomEditor({ r, reload, say }: { r: Rm; reload: () => void; say: (t: string, e?: boolean) => void }) {
+function RoomEditor({ r, reload, say, seasons, reloadSeasons }: { r: Rm; reload: () => void; say: (t: string, e?: boolean) => void; seasons: Se[]; reloadSeasons: () => void }) {
   const [photos, setPhotos] = useState<string[]>(JSON.parse(r.photos));
   const [open, setOpen] = useState(false);
   const [up, setUp] = useState(false);
@@ -251,6 +264,14 @@ function RoomEditor({ r, reload, say }: { r: Rm; reload: () => void; say: (t: st
       catch (er) { say((er as Error).message, true); }
     }
     setUp(false); e.target.value = ""; say("Foto caricate: ricorda di salvare");
+  }
+  async function remove() {
+    if (!confirm(`Eliminare "${r.name}"? Se ha prenotazioni verrà solo nascosta dal sito.`)) return;
+    try { const j = await api("/api/admin/rooms", "DELETE", { id: r.id }); say(j.hidden ? "La camera ha prenotazioni: è stata nascosta dal sito" : "Camera eliminata"); reload(); } catch (er) { say((er as Error).message, true); }
+  }
+  async function addSeason(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const form = e.currentTarget; const f = Object.fromEntries(new FormData(form));
+    try { await api("/api/admin/seasons", "POST", { roomId: r.id, from: f.from, to: plus1(String(f.to)), price: Number(f.price), minNights: Number(f.min) || undefined }); form.reset(); say("Prezzo per periodo salvato"); reloadSeasons(); } catch (er) { say((er as Error).message, true); }
   }
   const move = (i: number) => setPhotos((p) => { const n = [...p]; [n[0], n[i]] = [n[i], n[0]]; return n; });
   return (
@@ -277,7 +298,18 @@ function RoomEditor({ r, reload, say }: { r: Rm; reload: () => void; say: (t: st
               <label className="add">{up ? "Carico…" : "+ Foto"}<input type="file" accept="image/*" multiple hidden onChange={upload} /></label>
             </div>
           </div>
-          <div className="full"><button className="btn sm">Salva camera</button></div>
+          <div className="full" style={{ display: "flex", justifyContent: "space-between", gap: ".5rem", flexWrap: "wrap" }}><button className="btn sm">Salva camera</button><button type="button" className="btn sm ghost" style={{ color: "var(--bad)", borderColor: "var(--bad)" }} onClick={remove}>Elimina camera</button></div>
+        </form>
+      )}
+      {open && (
+        <form className="form" onSubmit={addSeason} style={{ borderTop: "1px solid #f1ebe1", paddingTop: "1.2rem" }}>
+          <div className="full"><b style={{ fontFamily: "var(--serif)", fontSize: "1.3rem", fontWeight: 500 }}>Prezzi per periodo</b><p style={{ fontSize: ".82rem", color: "var(--muted)" }}>Es. agosto, Natale, eventi: in quelle notti vale questo prezzo invece di quello base.</p></div>
+          {seasons.map((x) => <div className="full rowx" key={x.id}><span>{d(x.from_date)} → notte del {d(minus1(x.to_date))} · <b>{eur(x.price_cents)}</b>{x.min_nights ? ` · min ${x.min_nights} notti` : ""}</span><button type="button" className="btn sm ghost" onClick={async () => { await api("/api/admin/seasons", "DELETE", { id: x.id }); reloadSeasons(); }}>Rimuovi</button></div>)}
+          <div className="field"><label>Dal</label><input type="date" name="from" required /></div>
+          <div className="field"><label>Fino alla notte del</label><input type="date" name="to" required /></div>
+          <div className="field"><label>Prezzo / notte (€)</label><input type="number" name="price" min="1" step="0.01" required /></div>
+          <div className="field"><label>Min. notti</label><input type="number" name="min" min="1" placeholder="—" /></div>
+          <div className="full"><button className="btn sm">Aggiungi periodo</button></div>
         </form>
       )}
     </div>

@@ -338,3 +338,4 @@ footer .bar{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;p
 .login{min-height:100svh;display:grid;place-items:center;background:var(--ink);padding:1.2rem;position:relative;overflow:hidden}
 .login .bgimg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.25}
 .login form{position:relative;z-index:2;width:min(400px,100%);display:grid;gap:1.1rem;background:rgba(245,239,230,.97);border-radius:24px;padding:2.2rem}
+@media(max-width:640px){.cal .name{min-width:96px;max-width:96px;padding:0 .5rem;font-size:.7rem;line-height:1.15}.cal th,.cal td{min-width:34px;height:44px}.cal th.name{font-size:.62rem}}
