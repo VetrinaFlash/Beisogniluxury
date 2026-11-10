@@ -1,25 +1,17 @@
-# Bei Sogni Luxury – sito + prenotazioni dirette
+# Venus Inn B&B Positano – sito + prenotazioni dirette
 
-Next.js su Cloudflare **Worker** (OpenNext), D1 (dati), R2 (foto), Web Push (PWA admin).
-Prenotazione = richiesta dal sito, conferma manuale da `/admin`. Nessun pagamento online.
+Next.js su Cloudflare **Worker** (OpenNext), D1 (`venus-inn-db`), R2 (`venus-inn-photos`), Web Push (PWA admin).
+Sito in italiano (`/`) e inglese (`/en`). Prenotazione = richiesta dal sito, conferma manuale da `/admin`. Nessun pagamento online.
 
-## Deploy (Cloudflare → Workers & Pages → Import a repository)
-- Branch: `beisogniluxury`
-- Build command: `npx opennextjs-cloudflare build`
-- Deploy command: `npx wrangler deploy`
+Dati del cliente in `src/lib/brand.ts`, testi in `src/lib/i18n.ts`.
 
-D1 (`bei-sogni-db`) e R2 (`bei-sogni-photos`) vengono creati in automatico al primo deploy.
-Tabelle, camere iniziali e chiavi (JWT, VAPID push) vengono generate dall'app al primo avvio: nessun secret da inserire a mano.
+## Deploy
+Cloudflare → Workers → Import repository, branch `main` (o `beisogniluxury`).
+Build: `npx opennextjs-cloudflare build` · Deploy: `npx wrangler deploy`.
+Database, bucket, tabelle, camere, prezzi stagionali e chiavi push vengono creati da soli.
 
 ## Primo accesso
-Apri `/admin` subito dopo il deploy: la prima volta chiede di scegliere la password admin (min. 10 caratteri).
-Poi Notifiche → Attiva. Su iPhone: Condividi → Aggiungi a Home prima di attivare.
+`/admin` → scegli la password (min. 10 caratteri). Poi Sito → "Copia foto e video" per portare le immagini dal vecchio sito su R2.
 
 ## Email (opzionale)
-Aggiungi il secret `RESEND_API_KEY` e aggiorna `EMAIL_FROM` in `wrangler.jsonc`. Senza chiave le email vengono saltate, le push funzionano comunque.
-
-## Dominio
-Quando c'è il dominio aggiorna `SITE_URL` in `wrangler.jsonc`.
-
-## Da completare
-Testi e prezzi delle camere (segnaposto nel seed, modificabili da admin), foto reali, testo privacy da validare, versione inglese.
+Secret `RESEND_API_KEY` e `EMAIL_FROM` in `wrangler.jsonc`.

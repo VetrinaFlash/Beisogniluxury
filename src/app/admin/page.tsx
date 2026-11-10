@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import Logo from "@/components/Logo";
+import { BRAND } from "@/lib/brand";
 
 export default function Login() {
   const [err, setErr] = useState("");
@@ -20,9 +22,10 @@ export default function Login() {
   }
   return (
     <main className="login">
-      <div className="bgimg" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&q=60&w=1400")' }} />
+      <div className="bgimg" style={{ backgroundImage: `url("${BRAND.img.hero}")` }} />
       <form onSubmit={go}>
-        <div className="logo" style={{ fontSize: "2rem", color: "var(--ink)" }}>Bei Sogni<small style={{ color: "var(--goldd)" }}>Pannello di gestione</small></div>
+        <div className="brand"><Logo /></div>
+        <p className="eyebrow" style={{ justifyContent: "center" }}>Pannello di gestione</p>
         <p style={{ color: "var(--muted)", fontSize: ".92rem" }}>{setup ? "Primo accesso: scegli la password del pannello (almeno 10 caratteri)." : "Accedi per gestire prenotazioni, camere e calendario."}</p>
         <div className="field"><label htmlFor="pw">Password</label><input id="pw" name="password" type="password" autoComplete={setup ? "new-password" : "current-password"} minLength={setup ? 10 : undefined} required autoFocus /></div>
         {setup && <div className="field"><label htmlFor="pw2">Ripeti password</label><input id="pw2" name="confirm" type="password" autoComplete="new-password" required /></div>}

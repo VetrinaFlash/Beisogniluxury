@@ -1,6 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { env } from "./env";
-import { SCHEMA, SEED_ROOMS } from "./schema";
+import { SCHEMA, SEED_ROOMS, SEED_SEASONS } from "./schema";
 
 export interface Cfg {
   JWT_SECRET: string;
@@ -20,7 +20,7 @@ export function ensureSchema(): Promise<void> {
       const db = env().DB;
       await db.batch(SCHEMA.map((s) => db.prepare(s)));
       const n = await db.prepare("SELECT COUNT(*) n FROM rooms").first<{ n: number }>();
-      if (!n || n.n === 0) await db.exec(SEED_ROOMS.replace(/\s*\n\s*/g, " "));
+      if (!n || n.n === 0) await db.batch([db.prepare(SEED_ROOMS), db.prepare(SEED_SEASONS)]);
     })().catch((e) => { ready = null; throw e; });
   }
   return ready;

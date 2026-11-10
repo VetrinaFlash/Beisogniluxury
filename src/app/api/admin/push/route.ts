@@ -19,6 +19,6 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   if (!(await isAdmin(req))) return unauthorized();
   const { pushToAdmins } = await import("@/lib/notify");
-  await pushToAdmins("Bei Sogni Luxury", "Notifiche attive: riceverai qui le nuove richieste.");
+  await pushToAdmins("Venus Inn Positano", "Notifiche attive: riceverai qui le nuove richieste.");
   return Response.json({ ok: true });
 }

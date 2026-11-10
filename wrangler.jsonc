@@ -6,15 +6,15 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "bei-sogni-db" }
+    { "binding": "DB", "database_name": "venus-inn-db" }
   ],
   "r2_buckets": [
-    { "binding": "PHOTOS", "bucket_name": "bei-sogni-photos" }
+    { "binding": "PHOTOS", "bucket_name": "venus-inn-photos" }
   ],
   "vars": {
-    "SITE_NAME": "Bei Sogni Luxury",
-    "SITE_URL": "https://beisogniluxury.vetrinaflash.workers.dev",
-    "OWNER_EMAIL": "deisogniluxury@libero.it",
-    "EMAIL_FROM": "Bei Sogni Luxury <prenotazioni@example.com>"
+    "SITE_NAME": "Venus Inn B&B Positano",
+    "SITE_URL": "https://www.sleepingpositano.com",
+    "OWNER_EMAIL": "sleepingpositano@yahoo.it",
+    "EMAIL_FROM": "Venus Inn Positano <prenotazioni@example.com>"
   }
 }

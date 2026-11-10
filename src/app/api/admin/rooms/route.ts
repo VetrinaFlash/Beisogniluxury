@@ -9,13 +9,13 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   if (!(await isAdmin(req))) return unauthorized();
-  const b = (await req.json()) as { id: string; capacity?: number; name?: string; description?: string; base_price_cents?: number; min_nights?: number; photos?: string[]; active?: number };
+  const b = (await req.json()) as { id: string; capacity?: number; name?: string; description?: string; description_en?: string; base_price_cents?: number; min_nights?: number; photos?: string[]; active?: number };
   const cur = await env().DB.prepare("SELECT * FROM rooms WHERE id=?").bind(b.id).first<any>();
   if (!cur) return Response.json({ error: "Camera non trovata" }, { status: 404 });
   const price = b.base_price_cents ?? cur.base_price_cents;
   if (!Number.isInteger(price) || price < 0) return Response.json({ error: "Prezzo non valido" }, { status: 400 });
-  await env().DB.prepare("UPDATE rooms SET name=?,description=?,base_price_cents=?,min_nights=?,photos=?,active=?,capacity=? WHERE id=?")
-    .bind(b.name ?? cur.name, b.description ?? cur.description, price, b.min_nights ?? cur.min_nights, JSON.stringify(b.photos ?? JSON.parse(cur.photos)), b.active ?? cur.active, Math.min(12, Math.max(1, Math.round(b.capacity ?? cur.capacity))), b.id).run();
+  await env().DB.prepare("UPDATE rooms SET name=?,description=?,description_en=?,base_price_cents=?,min_nights=?,photos=?,active=?,capacity=? WHERE id=?")
+    .bind(b.name ?? cur.name, b.description ?? cur.description, (b.description_en ?? cur.description_en ?? "").slice(0, 2000), price, b.min_nights ?? cur.min_nights, JSON.stringify(b.photos ?? JSON.parse(cur.photos)), b.active ?? cur.active, Math.min(12, Math.max(1, Math.round(b.capacity ?? cur.capacity))), b.id).run();
   return Response.json({ ok: true });
 }
 

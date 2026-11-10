@@ -1,9 +1,9 @@
 import { env } from "@/lib/env";
 import { isAdmin, unauthorized } from "@/lib/auth";
 import { sendEmail } from "@/lib/notify";
-import { eur } from "@/lib/dates";
+import { guestEmail } from "@/lib/emails";
+import { roomName } from "@/lib/i18n";
 
-const esc = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 export async function GET(req: Request) {
   if (!(await isAdmin(req))) return unauthorized();
@@ -34,9 +34,9 @@ export async function PATCH(req: Request) {
     if (clash && clash.n > 0) return Response.json({ error: "Date già occupate da un'altra prenotazione o da un blocco" }, { status: 409 });
   }
   await e.DB.prepare("UPDATE bookings SET status=? WHERE id=?").bind(status, id).run();
-  if (status === "confirmed")
-    await sendEmail(b.guest_email, `Prenotazione confermata ${id} - ${e.SITE_NAME}`, `<p>Ciao ${esc(b.guest_name)}, la tua prenotazione di <b>${esc(b.room_name)}</b> dal ${b.check_in} al ${b.check_out} è <b>confermata</b>. Totale ${eur(b.total_cents)}, da saldare in struttura.</p>`);
-  if (status === "rejected")
-    await sendEmail(b.guest_email, `Richiesta ${id} non disponibile - ${e.SITE_NAME}`, `<p>Ciao ${esc(b.guest_name)}, purtroppo non riusciamo a confermare le date richieste. Contattaci su WhatsApp per trovare un'alternativa.</p>`);
+  if (status === "confirmed" || status === "rejected") {
+    const m = guestEmail(status, { ...b, room_name: roomName(b.room_name, b.lang === "en" ? "en" : "it") });
+    await sendEmail(b.guest_email, m.subject, m.html);
+  }
   return Response.json({ ok: true });
 }

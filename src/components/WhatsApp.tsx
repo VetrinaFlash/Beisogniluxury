@@ -1,17 +1,18 @@
 import { WaIcon } from "./Icons";
+import { T, type Lang, bookPath } from "@/lib/i18n";
 
-export const waLink = (num: string, text = "Buongiorno, vorrei informazioni per un soggiorno al Bei Sogni Luxury.") =>
-  `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
+export const waLink = (num: string, text: string) => `https://wa.me/${num}?text=${encodeURIComponent(text)}`;
 
-export default function WhatsApp({ num }: { num: string }) {
+export default function WhatsApp({ num, lang = "it" }: { num: string; lang?: Lang }) {
+  const t = T[lang].wa;
   return (
     <>
-      <a className="wa" href={waLink(num)} target="_blank" rel="noopener" aria-label="Scrivici su WhatsApp">
-        <WaIcon /><span className="lbl">Scrivici su WhatsApp</span>
+      <a className="wa" href={waLink(num, t.msg)} target="_blank" rel="noopener" aria-label={t.label}>
+        <WaIcon /><span className="lbl">{t.label}</span>
       </a>
       <div className="mbar">
-        <a className="wab" href={waLink(num)} target="_blank" rel="noopener" aria-label="WhatsApp"><WaIcon /></a>
-        <a className="btn block" href="/prenota">Verifica disponibilità</a>
+        <a className="wab" href={waLink(num, t.msg)} target="_blank" rel="noopener" aria-label="WhatsApp"><WaIcon /></a>
+        <a className="btn block" href={bookPath(lang)}>{t.bar}</a>
       </div>
     </>
   );

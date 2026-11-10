@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Admin",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
-  appleWebApp: { capable: true, title: "Bei Sogni", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Venus Inn", statusBarStyle: "black-translucent" },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -1,0 +1,115 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { T, POLICY, type Lang, privacyPath } from "@/lib/i18n";
+import { BRAND } from "@/lib/brand";
+
+type R = { id: string; name: string; description: string; capacity: number; amenities: string[]; photos: string[]; available: boolean; min_nights: number; total_cents: number; nights: number };
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const addDays = (s: string, n: number) => iso(new Date(Date.parse(s + "T00:00:00Z") + n * 86400000));
+
+export default function Booking({ lang = "it" }: { lang?: Lang }) {
+  const t = T[lang].book;
+  const loc = lang === "en" ? "en-GB" : "it-IT";
+  const eur = (c: number) => new Intl.NumberFormat(loc, { style: "currency", currency: "EUR" }).format(c / 100);
+  const fmt = (s: string) => new Date(s + "T12:00:00Z").toLocaleDateString(loc, { weekday: "short", day: "numeric", month: "long" });
+  const sp = useSearchParams();
+  const today = iso(new Date());
+  const [ci, setCi] = useState(sp.get("checkIn") ?? "");
+  const [co, setCo] = useState(sp.get("checkOut") ?? "");
+  const [guests, setGuests] = useState(sp.get("guests") ?? "2");
+  const [rooms, setRooms] = useState<R[] | null>(null);
+  const [sel, setSel] = useState<R | null>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ id: string; total: number } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const prefer = sp.get("room");
+  const wa = `https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(T[lang].wa.msg)}`;
+
+  async function search(e?: React.FormEvent) {
+    e?.preventDefault(); setErr(""); setSel(null);
+    if (!ci || !co) { setErr(t.pickDates); return; }
+    if (co <= ci) { setErr(t.afterArrival); return; }
+    setBusy(true); setRooms(null);
+    try {
+      const r = await fetch(`/api/availability?checkIn=${ci}&checkOut=${co}&guests=${guests}&lang=${lang}`);
+      const j: any = await r.json();
+      if (!r.ok) { setErr(j.error ?? "Error"); return; }
+      const list: R[] = j.rooms;
+      if (prefer) list.sort((a, b) => (a.id === prefer ? -1 : b.id === prefer ? 1 : 0));
+      setRooms(list);
+    } catch { setErr(t.conn); } finally { setBusy(false); }
+  }
+  useEffect(() => { if (ci && co) search(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { if (sel) setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); }, [sel]);
+
+  async function send(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); if (!sel) return; setErr(""); setBusy(true);
+    const f = Object.fromEntries(new FormData(e.currentTarget));
+    try {
+      const r = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, roomId: sel.id, checkIn: ci, checkOut: co, guests: Number(guests), lang }) });
+      const j: any = await r.json();
+      if (!r.ok) { setErr(j.error ?? "Error"); if (r.status === 409) search(); }
+      else { setDone({ id: j.id, total: j.total_cents }); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    } catch { setErr(t.conn); } finally { setBusy(false); }
+  }
+
+  if (done) return (
+    <div className="panel done">
+      <div className="tick">✓</div>
+      <h2>{t.sent[0]} <em>{t.sent[1]}</em></h2>
+      <p className="lead" style={{ margin: "0 auto 1.4rem" }}>{t.sentText(eur(done.total))}</p>
+      <p style={{ fontSize: ".9rem", color: "var(--muted)" }}>{t.code} <b style={{ color: "var(--ink)", letterSpacing: ".1em" }}>{done.id}</b></p>
+      <div className="policy" style={{ textAlign: "left", maxWidth: 560, margin: "1.4rem auto 0" }}><b>{t.policy}</b>{POLICY[lang]}</div>
+      <a className="btn ghost" href={lang === "en" ? "/en" : "/"} style={{ marginTop: "1.6rem" }}>{t.back}</a>
+    </div>
+  );
+
+  const anyShort = rooms?.some((r) => !r.available && r.nights < r.min_nights);
+  return (
+    <>
+      <form className="panel search" onSubmit={search}>
+        <div className="field"><label htmlFor="a">{T[lang].hero.arrive}</label><input id="a" type="date" min={today} value={ci} onChange={(e) => { setCi(e.target.value); if (!co || co <= e.target.value) setCo(addDays(e.target.value, 3)); }} required /></div>
+        <div className="field"><label htmlFor="b">{T[lang].hero.depart}</label><input id="b" type="date" min={ci ? addDays(ci, 1) : addDays(today, 1)} value={co} onChange={(e) => setCo(e.target.value)} required /></div>
+        <div className="field"><label htmlFor="c">{T[lang].hero.guests}</label><select id="c" value={guests} onChange={(e) => setGuests(e.target.value)}>{[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}</select></div>
+        <button className="btn" disabled={busy}>{busy && !rooms ? t.searching : t.search}</button>
+      </form>
+      {err && <div className="msg err" style={{ marginTop: "1rem" }} role="alert">{err}</div>}
+      {busy && !rooms && <div className="res"><div className="skel" /><div className="skel" /></div>}
+      {rooms && rooms.length === 0 && <div className="msg err" style={{ marginTop: "1rem" }}>{t.none}</div>}
+      {rooms && rooms.length > 0 && (
+        <>
+          <p style={{ marginTop: "1.6rem", color: "var(--muted)", fontSize: ".9rem" }}>{fmt(ci)} → {fmt(co)} · {rooms[0].nights} {rooms[0].nights === 1 ? t.night : t.nights} · {guests} {t.guests} · {t.breakfastIncl}</p>
+          <div className="res" style={{ marginTop: ".8rem" }}>
+            {rooms.map((r) => (
+              <div key={r.id} className={`rrow ${r.available ? "" : "off"} ${sel?.id === r.id ? "sel" : ""}`}>
+                <div className="thumb">{r.photos[0] ? <img src={r.photos[0]} alt={r.name} /> : "Venus"}</div>
+                <div><h3>{r.name}</h3><p className="sub">{r.available ? `${t.upTo} ${r.capacity} ${t.guests} · ${r.amenities.slice(0, 2).join(" · ")}` : r.nights < r.min_nights ? t.minStay(r.min_nights) : t.unavailable}</p></div>
+                {r.available && <div className="act"><div className="tot">{eur(r.total_cents)}<small>{eur(Math.round(r.total_cents / r.nights))} {t.perNight}</small></div><button className={`btn sm ${sel?.id === r.id ? "dark" : ""}`} onClick={() => setSel(r)}>{sel?.id === r.id ? t.chosen : t.choose}</button></div>}
+              </div>
+            ))}
+          </div>
+          {anyShort && <p className="hint">{t.shortStay} <a href={wa} target="_blank" rel="noopener">WhatsApp →</a></p>}
+        </>
+      )}
+      {sel && (
+        <form ref={formRef} className="panel" style={{ marginTop: "1.6rem", scrollMarginTop: 90 }} onSubmit={send}>
+          <span className="eyebrow">{t.yourData}</span>
+          <h3 style={{ fontSize: "2rem", marginTop: ".6rem" }}>{sel.name}</h3>
+          <div className="summary"><span>{fmt(ci)} → {fmt(co)}<br />{sel.nights} {sel.nights === 1 ? t.night : t.nights} · {guests} {t.guests} · {t.breakfastIncl}</span><b>{eur(sel.total_cents)}</b></div>
+          <div className="form">
+            <div className="field"><label htmlFor="n">{t.name}</label><input id="n" name="name" required maxLength={100} autoComplete="name" /></div>
+            <div className="field"><label htmlFor="p">{t.phone}</label><input id="p" name="phone" type="tel" required autoComplete="tel" placeholder="+39 …" /></div>
+            <div className="field full"><label htmlFor="m">{t.email}</label><input id="m" name="email" type="email" required autoComplete="email" /></div>
+            <div className="field full"><label htmlFor="tx">{t.notes}</label><textarea id="tx" name="notes" rows={3} maxLength={1000} /></div>
+            <input className="hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden />
+            <div className="full policy"><b>{t.policy}</b>{POLICY[lang]}</div>
+            <div className="full"><button className="btn block" disabled={busy}>{busy ? t.sending : t.send} <span className="arr">→</span></button></div>
+            <p className="full" style={{ fontSize: ".78rem", color: "var(--muted)", textAlign: "center" }}>{t.noPay} {t.accept}<a href={privacyPath(lang)} className="link">{t.privacy}</a>.</p>
+          </div>
+        </form>
+      )}
+    </>
+  );
+}

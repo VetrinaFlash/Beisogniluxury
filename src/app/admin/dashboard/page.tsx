@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/Icons";
+import Logo from "@/components/Logo";
 
-type B = { id: string; room_id: string; room_name: string; check_in: string; check_out: string; guests: number; guest_name: string; guest_email: string; guest_phone: string; notes: string; total_cents: number; status: string; created_at: string };
-type Rm = { id: string; name: string; description: string; capacity: number; base_price_cents: number; min_nights: number; photos: string; active: number };
+type B = { lang?: string; id: string; room_id: string; room_name: string; check_in: string; check_out: string; guests: number; guest_name: string; guest_email: string; guest_phone: string; notes: string; total_cents: number; status: string; created_at: string };
+type Rm = { id: string; name: string; description: string; description_en: string; capacity: number; base_price_cents: number; min_nights: number; photos: string; active: number };
 type Bl = { id: number; room_id: string; from_date: string; to_date: string; reason: string };
 type Se = { id: number; room_id: string; from_date: string; to_date: string; price_cents: number; min_nights: number | null };
 type Tab = "req" | "cal" | "rooms" | "site" | "push";
@@ -54,7 +55,7 @@ export default function Dashboard() {
   return (
     <div className="admin">
       <div className="atop"><div className="wrap">
-        <div className="logo">Bei Sogni<small>Gestione</small></div>
+        <Logo />
         <div className="anav">{TABS.map(([k, l]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}{k === "req" && pending > 0 && <span className="cnt">{pending}</span>}</button>)}</div>
         <div style={{ display: "flex", gap: ".4rem" }}>
           <a className="btn sm light" href="/" target="_blank" rel="noopener">Sito</a>
@@ -122,7 +123,7 @@ function Requests({ bk, reload, say }: { bk: B[]; reload: () => void; say: (t: s
           <div className={`bk ${b.status}`} key={b.id}>
             <div className="top">
               <div><div className="who">{b.guest_name}</div><div className="code">#{b.id} · ricevuta {new Date(b.created_at.replace(" ", "T") + "Z").toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div></div>
-              <span className={`badge ${b.status}`}>{LBL[b.status]}</span>
+              <span style={{ display: "flex", gap: ".35rem" }}>{b.lang === "en" && <span className="badge" style={{ background: "#e3eef6", color: "var(--sea)" }}>EN</span>}<span className={`badge ${b.status}`}>{LBL[b.status]}</span></span>
             </div>
             <div className="dates">
               <div><span>Camera</span><b>{b.room_name}</b></div>
@@ -133,7 +134,7 @@ function Requests({ bk, reload, say }: { bk: B[]; reload: () => void; say: (t: s
             </div>
             {b.notes && <div className="note">“{b.notes}”</div>}
             <div className="contact">
-              <a className="pill wa" href={wa(b, `Buongiorno ${b.guest_name}, la contattiamo dal Bei Sogni Luxury per la sua richiesta #${b.id}.`)} target="_blank" rel="noopener">WhatsApp</a>
+              <a className="pill wa" href={wa(b, b.lang === "en" ? `Hello ${b.guest_name}, this is Venus Inn Positano about your booking request #${b.id}.` : `Buongiorno ${b.guest_name}, la contattiamo dal Venus Inn di Positano per la sua richiesta #${b.id}.`)} target="_blank" rel="noopener">WhatsApp</a>
               <a className="pill" href={`tel:${b.guest_phone}`}><Icon n="phone" size={14} /> {b.guest_phone}</a>
               <a className="pill" href={`mailto:${b.guest_email}`}><Icon n="mail" size={14} /> {b.guest_email}</a>
             </div>
@@ -253,7 +254,7 @@ function RoomEditor({ r, reload, say, seasons, reloadSeasons }: { r: Rm; reload:
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const f = new FormData(e.currentTarget);
     try {
-      await api("/api/admin/rooms", "PATCH", { id: r.id, name: f.get("name"), description: f.get("description"), capacity: Number(f.get("capacity")), base_price_cents: Math.round(Number(f.get("price")) * 100), min_nights: Number(f.get("min")) || 1, photos, active: f.get("active") ? 1 : 0 });
+      await api("/api/admin/rooms", "PATCH", { id: r.id, name: f.get("name"), description: f.get("description"), description_en: f.get("description_en"), capacity: Number(f.get("capacity")), base_price_cents: Math.round(Number(f.get("price")) * 100), min_nights: Number(f.get("min")) || 1, photos, active: f.get("active") ? 1 : 0 });
       say("Camera salvata"); reload();
     } catch (er) { say((er as Error).message, true); }
   }
@@ -290,7 +291,8 @@ function RoomEditor({ r, reload, say, seasons, reloadSeasons }: { r: Rm; reload:
           <div className="field"><label>Ospiti massimi</label><input name="capacity" type="number" min="1" max="12" defaultValue={r.capacity} /></div>
           <div className="field"><label>Soggiorno minimo (notti)</label><input name="min" type="number" min="1" defaultValue={r.min_nights} /></div>
           <div className="field" style={{ display: "flex", alignItems: "end" }}><label style={{ display: "flex", gap: ".5rem", alignItems: "center", textTransform: "none", letterSpacing: 0, fontSize: ".9rem", color: "var(--ink)" }}><input type="checkbox" name="active" defaultChecked={!!r.active} style={{ width: 18, height: 18, appearance: "auto" }} />Visibile sul sito</label></div>
-          <div className="field full"><label>Descrizione</label><textarea name="description" rows={3} defaultValue={r.description} /></div>
+          <div className="field full"><label>Descrizione (italiano)</label><textarea name="description" rows={3} defaultValue={r.description} /></div>
+          <div className="field full"><label>Descrizione (inglese)</label><textarea name="description_en" rows={3} defaultValue={r.description_en} /></div>
           <div className="full">
             <div className="field"><label>Foto (la prima è la copertina · tocca una foto per renderla copertina)</label></div>
             <div className="thumbs">
@@ -331,29 +333,49 @@ async function shrink(file: File): Promise<File> {
 
 function SiteTab({ say }: { say: (t: string, e?: boolean) => void }) {
   const [s, setS] = useState<Record<string, string> | null>(null);
-  useEffect(() => { api("/api/admin/site").then((j) => setS(j.site)).catch(() => {}); }, []);
+  const [imp, setImp] = useState(false);
+  const load = useCallback(() => api("/api/admin/site").then((j) => setS(j.site)).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
   if (!s) return <div className="skel" />;
   async function save() { try { await api("/api/admin/site", "PUT", s); say("Sito aggiornato"); } catch (e) { say((e as Error).message, true); } }
   async function img(k: string, e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
     try { const fd = new FormData(); fd.append("file", await shrink(f)); const j = await api("/api/admin/photos", "POST", fd); setS({ ...s!, [k]: j.url }); say("Immagine caricata: ricorda di salvare"); } catch (er) { say((er as Error).message, true); }
   }
+  async function importAll() {
+    if (!confirm("Copiare sul tuo spazio tutte le foto e il video ancora presi dal vecchio sito? Può richiedere un minuto.")) return;
+    setImp(true);
+    try { const j = await api("/api/admin/import-photos", "POST"); say(j.errors.length ? `Copiati ${j.copied} file, ${j.errors.length} non riusciti` : `Copiati ${j.copied} file`, j.errors.length > 0); load(); }
+    catch (e) { say((e as Error).message, true); } finally { setImp(false); }
+  }
+  const external = Object.values(s).some((v) => /^https:\/\//.test(v));
   const Img = ({ k, label }: { k: string; label: string }) => (
     <div className="field"><label>{label}</label>
       <div style={{ display: "flex", gap: ".8rem", alignItems: "center" }}>
-        <div style={{ width: 120, height: 80, borderRadius: 12, backgroundImage: `url("${s[k]}")`, backgroundSize: "cover", backgroundPosition: "center", flex: "none", background: s[k] ? undefined : "var(--sand)" }} />
+        <div style={{ width: 120, height: 80, borderRadius: 12, backgroundImage: s[k] ? `url("${s[k]}")` : undefined, backgroundSize: "cover", backgroundPosition: "center", backgroundColor: "var(--sand)", flex: "none" }} />
         <label className="btn sm ghost" style={{ cursor: "pointer" }}>Cambia<input type="file" accept="image/*" hidden onChange={(e) => img(k, e)} /></label>
       </div>
     </div>
   );
+  const Txt = ({ k, label }: { k: string; label: string }) => <div className="field full"><label>{label}</label><textarea rows={2} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></div>;
   return (
     <>
       <div className="atitle"><h1>Contenuti del sito</h1><a className="btn sm ghost" href="/" target="_blank" rel="noopener">Vedi sito</a></div>
+      {external && <div className="card" style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}><span style={{ fontSize: ".9rem" }}>Alcune foto sono ancora prese dal vecchio sito. Copiale sul tuo spazio così il sito non dipende più da lì.</span><button className="btn sm" onClick={importAll} disabled={imp}>{imp ? "Copio…" : "Copia foto e video"}</button></div>}
       <div className="card form" style={{ marginTop: 0 }}>
-        <Img k="heroImage" label="Foto principale (home)" />
-        <Img k="introImage" label="Foto sezione Il B&B" />
-        <div className="field full"><label>Sottotitolo home</label><textarea rows={2} value={s.heroSubtitle} onChange={(e) => setS({ ...s, heroSubtitle: e.target.value })} /></div>
-        <div className="field full"><label>Frase sezione Il B&B</label><textarea rows={2} value={s.introText} onChange={(e) => setS({ ...s, introText: e.target.value })} /></div>
+        <Img k="heroImage" label="Foto principale (copertina del video)" />
+        <Img k="introImage" label="Foto sezione Benvenuti" />
+        <Img k="hostImage" label="Foto del padrone di casa" />
+        <div className="field"><label>Video di sfondo (home)</label>
+          <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: ".85rem", color: "var(--muted)" }}>{s.heroVideo ? "Video attivo" : "Nessun video: si vede la foto"}</span>
+            {s.heroVideo && <button type="button" className="btn sm ghost" onClick={() => setS({ ...s, heroVideo: "" })}>Rimuovi video</button>}
+          </div>
+        </div>
+        <Txt k="heroSubtitle" label="Sottotitolo home (italiano)" />
+        <Txt k="heroSubtitle_en" label="Sottotitolo home (inglese)" />
+        <Txt k="introText" label="Frase Benvenuti (italiano)" />
+        <Txt k="introText_en" label="Frase Benvenuti (inglese)" />
         <div className="field"><label>Numero WhatsApp (con prefisso, es. 39…)</label><input value={s.whatsapp} onChange={(e) => setS({ ...s, whatsapp: e.target.value })} /></div>
         <div className="full"><button className="btn sm" onClick={save}>Salva contenuti</button></div>
       </div>
@@ -390,7 +412,7 @@ function PushTab({ say }: { say: (t: string, e?: boolean) => void }) {
       <div className="atitle"><h1>Notifiche</h1></div>
       <div className="card" style={{ display: "grid", gap: "1rem", maxWidth: 620 }}>
         <p>Ricevi un avviso sul telefono a ogni nuova richiesta di prenotazione, anche con l&apos;app chiusa.</p>
-        {state === "ios" && <div className="msg err">Su iPhone: tocca <b>Condividi</b> → <b>Aggiungi alla schermata Home</b>, apri “Bei Sogni” dalla Home e torna qui.</div>}
+        {state === "ios" && <div className="msg err">Su iPhone: tocca <b>Condividi</b> → <b>Aggiungi alla schermata Home</b>, apri “Venus Inn” dalla Home e torna qui.</div>}
         {state === "unsupported" && <div className="msg err">Questo browser non supporta le notifiche push. Usa Chrome su Android o l&apos;app dalla Home su iPhone.</div>}
         {state === "on" && <div className="msg ok">Notifiche attive su questo dispositivo.</div>}
         <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>

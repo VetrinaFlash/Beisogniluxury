@@ -1,0 +1,50 @@
+// Dati del cliente: unico punto da modificare per un rebranding.
+const U = "https://www.sleepingpositano.com/wp-content/uploads";
+
+export const BRAND = {
+  name: "Venus Inn",
+  fullName: "Venus Inn B&B Positano",
+  tagline: "B&B · Positano",
+  domain: "https://www.sleepingpositano.com",
+  street: "Via Fornillo 9",
+  zip: "84017",
+  city: "Positano",
+  province: "SA",
+  phone: "+39 338 542 8531",
+  phoneRaw: "+393385428531",
+  whatsapp: "393385428531",
+  email: "sleepingpositano@yahoo.it",
+  cin: "IT065100C1PMEZMSTW",
+  host: "Gippy",
+  checkIn: "12:00 – 24:00",
+  checkOut: "10:30",
+  mapsQuery: "Via Fornillo 9, 84017 Positano SA",
+  logoWhite: `${U}/logo-white2-2.png`,
+  logoBlue: `${U}/log-blueo.png`,
+  social: {
+    facebook: "https://www.facebook.com/VenusInnBBPositano/",
+    instagram: "https://www.instagram.com/bbvenusinnpositano/",
+    youtube: "https://www.youtube.com/watch?v=twQOZW60DRA",
+  },
+  img: {
+    hero: `${U}/positano-1.jpg`,
+    heroVideo: `${U}/BB-VENUS-Inn-Positano.mp4`,
+    intro: `${U}/venussinn-Positano-flowers.jpg`,
+    host: `${U}/gippy-pictures-e1725899096296.jpg`,
+    breakfast: `${U}/bed-and-breakfast-Positano.jpg`,
+    door: `${U}/PortaVENUSInn-bbvenusinn.jpg`,
+    fornillo: `${U}/vedutaFornillo-bbvenusinn.jpg`,
+    grotta: `${U}/GrottaFornilloPositano-bbvenusinn.jpg`,
+    trekking: `${U}/view-Positano-trekking-web.jpg`,
+    amalfi: `${U}/amalfi.jpg`,
+    ravello: `${U}/ravello.jpg`,
+    sorrento: `${U}/sorrento.jpg`,
+    pompei: `${U}/Pompei.jpg`,
+    ischia: `${U}/Ischia.jpg`,
+    ambra: `${U}/IMG_20260420_124258.jpg`,
+    smeraldo: `${U}/bb-Amalfi-Coast.jpg`,
+    corallo: `${U}/IMG_20260420_134051.jpg`,
+  },
+};
+
+export const fullAddress = `${BRAND.street}, ${BRAND.zip} ${BRAND.city} (${BRAND.province})`;
